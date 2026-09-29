@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Q-JUMP 疑問文ジャンプ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sky:#A7E1F8; --sky2:#E3F6FD; --ink:#1D2B45; --muted:#4F6380;
+  --panel:#FFFFFF; --panel-edge:#1D2B45;
+  --tile:#FFFFFF; --tile-edge:#1D2B45; --tile-ink:#1D2B45;
+  --gold:#FFC83D; --gold-edge:#A86F00;
+  --qword:#8ED3FF; --qword-edge:#2F77B5;
+  --grass:#58B947; --dirt:#8A5A32;
+  --ok:#23994A; --ng:#D93B40;
+  --pixel:"DotGothic16", "M PLUS Rounded 1c", system-ui, sans-serif;
+  --body:"M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", system-ui, sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --sky:#13213F; --sky2:#243A66; --ink:#EAF2FF; --muted:#A9BCDA;
+    --panel:#1C2A4B; --panel-edge:#8FB0E0;
+    --tile:#F4F7FB; --tile-edge:#0E1830; --tile-ink:#1D2B45;
+    --grass:#3F8F35; --dirt:#5E3D22;
+  }
+}
+:root[data-theme="dark"]{
+  --sky:#13213F; --sky2:#243A66; --ink:#EAF2FF; --muted:#A9BCDA;
+  --panel:#1C2A4B; --panel-edge:#8FB0E0;
+  --tile:#F4F7FB; --tile-edge:#0E1830; --tile-ink:#1D2B45;
+  --grass:#3F8F35; --dirt:#5E3D22;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0;min-height:100%;
+  background:linear-gradient(180deg,var(--sky) 0%,var(--sky2) 100%) fixed, var(--sky);
+  color:var(--ink);font-family:var(--body);font-weight:500;line-height:1.6;
+  -webkit-tap-highlight-color:transparent;
+}
+main{max-width:560px;margin:0 auto;padding:16px 16px 120px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,.tile:focus-visible{outline:3px solid #FF7A00;outline-offset:3px}
+.ground{position:fixed;left:0;right:0;bottom:0;height:calc(34px + env(safe-area-inset-bottom,0px));
+  background:linear-gradient(var(--grass) 0 10px,var(--dirt) 10px);pointer-events:none;z-index:0}
+main{position:relative;z-index:1}
+
+/* title / map */
+.logo{font-family:var(--pixel);font-size:44px;line-height:1.1;margin:12px 0 2px;letter-spacing:.02em}
+.logo .q{display:inline-block;background:var(--gold);color:#1D2B45;border:3px solid var(--gold-edge);
+  border-bottom-width:7px;border-radius:6px;padding:0 10px;margin-right:6px;transform:translateY(-4px)}
+.lead{margin:0 0 18px;color:var(--muted)}
+.path{display:flex;flex-direction:column;gap:12px}
+.node{display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+  background:var(--panel);border:3px solid var(--panel-edge);border-bottom-width:6px;border-radius:10px;padding:12px 14px}
+.node[disabled]{opacity:.5;cursor:not-allowed}
+.node .num{flex:none;width:44px;height:44px;display:grid;place-items:center;font-family:var(--pixel);font-size:22px;
+  background:var(--gold);color:#1D2B45;border:3px solid var(--gold-edge);border-radius:6px}
+.node.boss .num{background:#FF8A8A;border-color:#A8323A}
+.node.paper .num{background:#FFFFFF;border-color:#1D2B45}
+.node .t{font-weight:800;font-size:17px;display:block}
+.node .s{font-size:13px;color:var(--muted);display:block}
+.node .stars{margin-left:auto;font-size:18px;letter-spacing:2px;white-space:nowrap}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.small{font-size:13px;color:var(--muted)}
+.linkbtn{background:none;border:none;text-decoration:underline;color:var(--muted);padding:4px}
+
+/* hud */
+.hud{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.hud .back{background:var(--panel);border:2px solid var(--panel-edge);border-radius:8px;padding:4px 10px;font-size:14px}
+.hud .name{font-family:var(--pixel);font-size:18px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hud .meta{font-size:14px;white-space:nowrap}
+.combo{font-weight:800;color:#E4570F}
+
+/* sign */
+.sign{background:var(--panel);border:3px solid var(--panel-edge);border-bottom-width:6px;border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.sign .ins{font-size:14px;color:var(--muted);margin:0 0 4px}
+.sign .prompt{font-size:22px;font-weight:800;margin:0;line-height:1.4}
+.sign .ctx{font-size:16px;margin:6px 0 0;color:var(--muted)}
+.badge{display:inline-block;font-size:14px;font-weight:800;border-radius:999px;padding:2px 12px;margin-top:8px;border:2px solid currentColor}
+.badge.yes{color:var(--ok)} .badge.no{color:var(--ng)}
+.speak{background:none;border:2px solid var(--panel-edge);border-radius:999px;padding:2px 12px;font-size:14px;margin-top:8px;margin-left:6px}
+
+/* rail & tiles */
+.rail{min-height:72px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px;border-radius:12px;
+  border:3px dashed var(--panel-edge);background:color-mix(in srgb,var(--panel) 55%,transparent);margin-bottom:10px}
+.rail.demo{border-style:solid;justify-content:center;min-height:84px}
+.rail .empty{color:var(--muted);font-size:14px}
+.rail.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.tile{font-family:var(--body);font-weight:800;font-size:20px;color:var(--tile-ink);
+  background:var(--tile);border:3px solid var(--tile-edge);border-bottom-width:7px;border-radius:8px;
+  padding:6px 14px 4px;min-height:48px;display:inline-flex;align-items:center;user-select:none}
+.tile.gold{background:var(--gold);border-color:var(--gold-edge)}
+.tile.qw{background:var(--qword);border-color:var(--qword-edge)}
+.tile.used{visibility:hidden}
+.tile:active{transform:translateY(3px);border-bottom-width:4px}
+.tile.flash{animation:flash .9s 2}
+.tile.bad{background:#FFD3D3;border-color:var(--ng)}
+@keyframes flash{50%{box-shadow:0 0 0 6px #FF7A00}}
+.tile.pulse{animation:pulse 1.2s infinite}
+@keyframes pulse{50%{transform:translateY(-6px)}}
+.punct{font-weight:800;font-size:26px;margin-left:-4px}
+.pool{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;min-height:60px;margin:6px 0 16px}
+
+.fb{min-height:28px;font-weight:700;margin:0 0 8px;font-size:15px}
+.fb.ng{color:var(--ng)} .fb.ok{color:var(--ok)}
+.actions{display:flex;gap:10px}
+.btn{flex:1;border:3px solid var(--panel-edge);border-bottom-width:6px;border-radius:10px;padding:10px 8px;
+  font-weight:800;font-size:16px;background:var(--panel)}
+.btn.primary{background:#FF8A1F;color:#fff;border-color:#9C4A00}
+.btn.go{background:var(--ok);color:#fff;border-color:#0F5B29}
+.btn:active{transform:translateY(3px);border-bottom-width:3px}
+.btn[disabled]{opacity:.45}
+
+.win{background:var(--panel);border:3px solid var(--ok);border-bottom-width:6px;border-radius:12px;padding:14px 16px;margin-top:4px}
+.win .big{font-size:24px;font-weight:800;margin:4px 0 8px}
+.win .say{font-size:15px;margin:0 0 12px}
+.pop{font-family:var(--pixel);color:#E4570F;font-size:20px}
+
+/* intro */
+.card{background:var(--panel);border:3px solid var(--panel-edge);border-bottom-width:6px;border-radius:12px;padding:16px;margin-bottom:14px}
+.card h2{font-family:var(--pixel);font-weight:400;font-size:24px;margin:0 0 6px}
+.card p{margin:6px 0}
+.ex{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:2px dashed var(--panel-edge);padding:10px 0;font-size:18px;font-weight:800}
+.ex:first-of-type{border-top:none}
+
+/* result */
+.bigstars{font-size:52px;letter-spacing:6px;text-align:center;margin:10px 0}
+.center{text-align:center}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(10,20,40,.55);display:grid;place-items:center;padding:16px;z-index:10}
+.modal .card{max-width:520px;width:100%}
+
+/* paper */
+.pitem{display:flex;gap:12px;align-items:flex-start;border-top:2px dashed var(--panel-edge);padding:12px 0}
+.pitem:first-of-type{border-top:none}
+.pitem input{width:26px;height:26px;margin-top:2px;flex:none;accent-color:var(--ok)}
+.pitem .no{font-family:var(--pixel);margin-right:4px}
+.pitem .ans{font-weight:800;margin-top:4px}
+
+
+
+.mic{background:#2F77B5;color:#fff;border-color:#163F63}
+.mic.on{background:var(--ng);border-color:#7A1B1F;animation:pulse 1s infinite}
+.heard{font-size:14px;color:var(--muted);margin:0 0 10px;min-height:1.4em}
+.heard.ok{color:var(--ok);font-weight:700}
+.pool.locked .tile{opacity:.3;pointer-events:none}
+.speak.must{background:#FF8A1F;color:#fff;border-color:#9C4A00;font-weight:800;animation:pulse 1.1s infinite}
+.speak.done{border-color:var(--ok);color:var(--ok)}
+.warn{background:#FFF1D6;color:#6B4200;border:2px solid #C98A00;border-radius:10px;padding:10px 12px;font-size:14px;margin:0 0 10px}
+/* buddy */
+.buddy{flex:none;width:64px;height:64px}
+.buddy svg{width:100%;height:100%;overflow:visible;animation:bob 2.2s ease-in-out infinite;transform-origin:50% 100%}
+.buddy.jump svg{animation:hop .65s cubic-bezier(.3,.7,.3,1)}
+.buddy.sad svg{animation:wob .6s}
+.buddy.cheer svg{animation:hop .65s cubic-bezier(.3,.7,.3,1) 3}
+.buddy .m-sad,.buddy .tear{display:none}
+.buddy.sad .m-happy{display:none}
+.buddy.sad .m-sad,.buddy.sad .tear{display:inline}
+@keyframes bob{50%{transform:translateY(-3px) scaleY(1.03)}}
+@keyframes hop{0%{transform:scale(1.1,.85)}35%{transform:translateY(-34px) scale(.95,1.08)}70%{transform:translateY(0) scale(1.1,.88)}100%{transform:none}}
+@keyframes wob{25%{transform:rotate(-10deg)}50%{transform:rotate(8deg)}75%{transform:rotate(-4deg)}}
+.buddyrow{display:flex;align-items:center;gap:10px;margin:0 0 8px}
+.buddyrow .fb{margin:0;flex:1}
+.bubble{background:var(--panel);border:2px solid var(--panel-edge);border-radius:12px;padding:6px 12px;font-size:14px;position:relative}
+.logorow{display:flex;align-items:flex-end;gap:10px}
+.logorow .buddy{width:72px;height:72px;margin-bottom:6px}
+.center .buddy{margin:0 auto;width:88px;height:88px}
+@media (prefers-reduced-motion: reduce){.buddy svg{animation:none!important}}
+@media (prefers-reduced-motion: reduce){
+  .tile.pulse,.tile.flash,.rail.shake{animation:none}
+}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<div class="ground" aria-hidden="true"></div>
+
+<script>
+/* ---------- data ---------- */
+const make = (st, key='is') => ({mode:'make', stmt:st, v:st.indexOf(key)});
+const R2 = ['yes','no','he','she','it','is',"isn't"];
+const R3 = ['yes','no','he','she','is',"isn't",'can',"can't"];
+
+const STAGES = [
+  { id:'s1', title:'is をジャンプ', sub:'ふつうの文 → 疑問文', intro:'jumpIs',
+    items:[ make(['he','is','a teacher']), make(['that','is','a gorilla']), make(['this','is','your cup']),
+            make(['she','is','a singer']), make(['it','is','a fox']), make(['he','is','on','the tennis team']),
+            make(['Tim','is','from Australia']) ] },
+  { id:'s2', title:'Yes / No で答える', sub:'Yes, he is. / No, it isn\u2019t.', intro:'reply',
+    items:[
+      {mode:'reply', q:'Is he a teacher?', yn:'yes', answer:['yes','he','is']},
+      {mode:'reply', q:'Is Ms. Cook a dancer?', yn:'yes', answer:['yes','she','is']},
+      {mode:'reply', q:'Is this your cup?', yn:'no', answer:['no','it',"isn't"], extra:['this']},
+      {mode:'reply', q:'Is that a gorilla?', yn:'yes', answer:['yes','it','is'], extra:['that']},
+      {mode:'reply', q:'Is Saya a singer?', yn:'no', answer:['no','she',"isn't"]},
+      {mode:'reply', q:'Is Tom from the U.S.?', yn:'yes', answer:['yes','he','is']} ] },
+  { id:'s3', title:'can もジャンプ', sub:'Can she ~? / Yes, she can.', intro:'jumpCan',
+    items:[
+      make(['she','can','draw well'],'can'),
+      {mode:'reply', q:'Can Ms. Tani draw well?', yn:'yes', answer:['yes','she','can'], base:R3},
+      make(['he','can','swim'],'can'),
+      {mode:'reply', q:'Can Ken play the piano?', yn:'no', answer:['no','he',"can't"], base:R3},
+      make(['Tim','can','speak Japanese'],'can'),
+      {mode:'reply', q:'Is Rio an actor?', yn:'yes', answer:['yes','she','is'], base:R3} ] },
+  { id:'s4', title:'ボス：テストの問題', sub:'Program 4 のテストに出た問題', intro:'boss', boss:true,
+    items:[
+      {mode:'ja', no:15, ja:'あれはゴリラですか。', answer:['is','that','a gorilla'], kind:'q', extra:['this'], stmt:['that','is','a gorilla']},
+      {mode:'ja', no:16, ja:'彼はあなたのおじさんですか。', answer:['is','he','your uncle'], kind:'q', extra:['she'], stmt:['he','is','your uncle']},
+      {mode:'ja', no:17, ja:'クックさんはダンサーですか。— はい、そうです。', en:'Is Ms. Cook a dancer?', answer:['yes','she','is'], kind:'a', extra:['he','no',"isn't"]},
+      {mode:'ja', no:19, ja:'彼はテニス部に入っていますか。', answer:['is','he','on','the tennis team'], kind:'q', stmt:['he','is','on','the tennis team']},
+      {mode:'ja', no:20, ja:'あなたの一番好きなアーティストはだれですか。', answer:['who','is','your','favorite','artist'], kind:'q',
+        tip:'your（あなたの）は favorite の前。your favorite artist で「あなたの一番好きなアーティスト」'},
+      {mode:'ja', no:25, ja:'タニ先生は上手に絵が描けますか。— はい。', en:'Can Ms. Tani draw well?', answer:['yes','she','can'], kind:'a', extra:['is','he']},
+      {mode:'ja', no:27, ja:'サヤは歌手？ — いいえ！ サヤはお笑い芸人だよ。', en:'Is Saya a singer? — No!', answer:['she','is','a comedian'], kind:'a', extra:['he','it'],
+        tip:'サヤは女の人だから she。「She is a comedian.」の形で答えよう'} ] }
+];
+
+const PAPER = [
+  {no:'15', ja:'あれはゴリラですか。', ans:'Is that a gorilla?'},
+  {no:'16', ja:'彼はあなたのおじさんですか。', ans:'Is he your uncle?'},
+  {no:'17', ja:'クックさんはダンサーですか。— はい、そうです。', ans:'Yes, she is.'},
+  {no:'19', ja:'彼はテニス部に入っていますか。', ans:'Is he on the tennis team?'},
+  {no:'20', ja:'あなたの一番好きなアーティストはだれですか。', ans:'Who is your favorite artist?'},
+  {no:'25', ja:'タニ先生は上手に絵が描けますか。— はい。', ans:'Yes, she can.'},
+  {no:'声', ja:'書いた6つの文を、声に出して読む', ans:''}
+];
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const app = $('#app');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
+const eq = (a,b) => a.length===b.length && a.every((x,i)=>x.toLowerCase()===b[i].toLowerCase());
+const shuffle = a => { a=[...a]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+const isYN = t => /^(yes|no)$/i.test(t);
+const tileClass = t => /^(is|isn't|can|can't)$/i.test(t) ? 'gold' : (/^(who|what|when)$/i.test(t) ? 'qw' : '');
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+function textOf(tokens, kind){
+  const w = tokens.map((t,i)=> i===0 ? cap(t) : t);
+  if(kind==='a' && isYN(tokens[0]) && tokens.length>1) w[0]+=',';
+  return w.join(' ') + (kind==='q' ? '?' : '.');
+}
+function kindOf(it){ return it.mode==='make' ? 'q' : it.mode==='reply' ? 'a' : it.kind; }
+function answerOf(it){
+  if(it.mode==='make'){ const s=it.stmt; return [s[it.v], ...s.filter((_,i)=>i!==it.v)]; }
+  return it.answer;
+}
+
+/* storage */
+const KEY='qjump-v1';
+let save = {stars:{}, paper:{}, sound:true, micRequired:true};
+try{ const r=localStorage.getItem(KEY); if(r) save=Object.assign(save, JSON.parse(r)); }catch(e){}
+function persist(){ try{ localStorage.setItem(KEY, JSON.stringify(save)); }catch(e){} }
+
+/* sound & voice */
+let ac=null;
+function beep(freqs, dur=.09, type='square'){
+  if(!save.sound) return;
+  try{
+    ac = ac || new (window.AudioContext||window.webkitAudioContext)();
+    const t=ac.currentTime;
+    freqs.forEach((f,i)=>{ const o=ac.createOscillator(), g=ac.createGain();
+      o.type=type; o.frequency.value=f;
+      g.gain.setValueAtTime(.07,t+i*dur); g.gain.exponentialRampToValueAtTime(.001,t+(i+1)*dur);
+      o.connect(g).connect(ac.destination); o.start(t+i*dur); o.stop(t+(i+1)*dur+.02); });
+  }catch(e){}
+}
+const sfx = { tap:()=>beep([700],.05), coin:()=>beep([988,1319],.1), ng:()=>beep([220,150],.14,'sawtooth'),
+  fan:()=>beep([523,659,784,1047],.12) };
+function speak(text, lang='en-US', onEnd){
+  let fired=false; const fin=()=>{ if(fired) return; fired=true; onEnd&&onEnd(); };
+  try{
+    if(!('speechSynthesis' in window)){ fin(); return; }
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text.replace(/—/g,','));
+    u.lang=lang; u.rate = lang.startsWith('ja') ? 1 : .85;
+    const re = lang.startsWith('ja') ? /^ja/i : /^en(-|_)US/i;
+    const v = speechSynthesis.getVoices().find(v=>re.test(v.lang));
+    if(v) u.voice=v;
+    u.onend=fin; u.onerror=fin;
+    speechSynthesis.speak(u);
+    if(onEnd) setTimeout(fin, 1800 + text.length*110); // 終了イベントが来ない端末の保険
+  }catch(e){ fin(); }
+}
+
+
+/* buddy "ポン" (original character) */
+function buddySVG(){
+  return `<svg viewBox="0 0 64 64" aria-hidden="true">
+    <ellipse cx="32" cy="61" rx="15" ry="2.5" fill="rgba(0,0,0,.18)"/>
+    <path d="M32 24 Q31 17 32 12" stroke="#2E7D32" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M32 13 Q22 4 16 11 Q24 17 32 13Z" fill="#6CCB4E" stroke="#1D2B45" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M32 13 Q42 2 49 8 Q41 16 32 13Z" fill="#6CCB4E" stroke="#1D2B45" stroke-width="2.5" stroke-linejoin="round"/>
+    <ellipse cx="24" cy="58" rx="6" ry="3.5" fill="#E8A86A" stroke="#1D2B45" stroke-width="2.5"/>
+    <ellipse cx="40" cy="58" rx="6" ry="3.5" fill="#E8A86A" stroke="#1D2B45" stroke-width="2.5"/>
+    <ellipse cx="32" cy="40" rx="20" ry="17" fill="#FFD9A8" stroke="#1D2B45" stroke-width="3"/>
+    <circle cx="25" cy="38" r="3.4" fill="#1D2B45"/><circle cx="39" cy="38" r="3.4" fill="#1D2B45"/>
+    <circle cx="26.2" cy="36.8" r="1.1" fill="#fff"/><circle cx="40.2" cy="36.8" r="1.1" fill="#fff"/>
+    <ellipse cx="19.5" cy="44" rx="3.5" ry="2" fill="#FF9B9B" opacity=".75"/>
+    <ellipse cx="44.5" cy="44" rx="3.5" ry="2" fill="#FF9B9B" opacity=".75"/>
+    <path class="m-happy" d="M28 44 Q32 49 36 44" stroke="#1D2B45" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path class="m-sad" d="M28 47.5 Q32 43.5 36 47.5" stroke="#1D2B45" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path class="tear" d="M42 41 q2 4 0 6 q-2 -2 0 -6Z" fill="#6EC6F0"/>
+  </svg>`;
+}
+function buddy(id,cls=''){ return `<div class="buddy ${cls}" id="${id}">${buddySVG()}</div>`; }
+function setBuddy(id,state){ const b=document.getElementById(id); if(!b) return;
+  b.classList.remove('jump','sad','cheer'); void b.offsetWidth; if(state) b.classList.add(state); }
+
+
+/* ---------- speech recognition ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let micBlocked=false, micPasses=0;
+function norm(t){
+  return t.toLowerCase()
+    .replace(/isn['’]t/g,'is not').replace(/can['’]t/g,'can not').replace(/cannot/g,'can not')
+    .replace(/\bmiss\b|\bms\b\.?|\bmrs\b/g,'ms').replace(/u\.s\./g,'us')
+    .replace(/[^a-z ]/g,' ').replace(/\s+/g,' ').trim().split(' ').filter(Boolean);
+}
+function lcs(a,b){ const d=Array(b.length+1).fill(0);
+  for(const x of a){ let prev=0; for(let j=1;j<=b.length;j++){ const tmp=d[j]; d[j]= x===b[j-1] ? prev+1 : Math.max(d[j],d[j-1]); prev=tmp; } }
+  return d[b.length]; }
+function matchScore(heard, target){ const t=norm(target), h=norm(heard); return t.length ? lcs(t,h)/t.length : 0; }
+function listen(target, onRes, onErr){
+  const r=new SR(); r.lang='en-US'; r.interimResults=false; r.maxAlternatives=5;
+  let done=false;
+  r.onresult=e=>{ done=true; const alts=[...e.results[0]].map(a=>a.transcript);
+    let best=alts[0]||'', bs=0; alts.forEach(a=>{ const sc=matchScore(a,target); if(sc>bs){bs=sc;best=a;} });
+    onRes(best,bs); };
+  r.onerror=e=>{ done=true; onErr(e.error); };
+  r.onend=()=>{ if(!done) onErr('no-speech'); };
+  try{ speechSynthesis.cancel(); r.start(); }catch(e){ onErr('start'); }
+  return r;
+}
+
+/* ---------- jump demo (FLIP) ---------- */
+function mountDemo(host, tokens, v, onDone){
+  host.innerHTML='';
+  const rail=document.createElement('div'); rail.className='rail demo';
+  const nodes = tokens.map((t,i)=>{
+    const el=document.createElement(i===v?'button':'span');
+    el.className='tile '+tileClass(t)+(i===v?' pulse':'');
+    el.textContent = i===0 ? cap(t) : t;
+    if(i===v) el.setAttribute('aria-label', t+' を先頭にジャンプ');
+    rail.appendChild(el); return el;
+  });
+  const p=document.createElement('span'); p.className='punct'; p.textContent='.'; rail.appendChild(p);
+  host.appendChild(rail);
+  nodes[v].addEventListener('click', ()=>{
+    const kids=[...rail.children];
+    const first=kids.map(n=>n.getBoundingClientRect());
+    nodes[0].textContent = tokens[0];
+    rail.insertBefore(nodes[v], rail.firstChild);
+    nodes[v].textContent = cap(tokens[v]);
+    nodes[v].classList.remove('pulse'); nodes[v].disabled=true;
+    p.textContent='?';
+    kids.forEach((n,i)=>{
+      const last=n.getBoundingClientRect(); const dx=first[i].left-last.left, dy=first[i].top-last.top;
+      if(reduced || (!dx && !dy)) return;
+      const frames = n===nodes[v]
+        ? [{transform:`translate(${dx}px,${dy}px)`},{transform:`translate(${dx/2}px,${dy/2-64}px)`},{transform:'none'}]
+        : [{transform:`translate(${dx}px,${dy}px)`},{transform:'none'}];
+      n.animate(frames,{duration:560,easing:'cubic-bezier(.3,.7,.3,1)'});
+    });
+    sfx.coin();
+    const q=[tokens[v], ...tokens.filter((_,i)=>i!==v)];
+    speak(textOf(q,'q'));
+    onDone && onDone(textOf(q,'q'));
+  }, {once:true});
+}
+
+/* ---------- screens ---------- */
+function starStr(n){ return '★'.repeat(n)+'☆'.repeat(3-n); }
+function unlocked(i){ return i===0 || (save.stars[STAGES[i-1].id]||0)>0; }
+
+function showMap(){
+  const bossDone = (save.stars.s4||0)>0;
+  app.innerHTML = `
+    <div class="logorow"><h1 class="logo"><span class="q">?</span>Q-JUMP</h1>${buddy('mapb')}</div>
+    ${save.micRequired && !SR ? `<p class="warn">このブラウザは音声認識に対応していないため、マイク必須のままだと問題を解いても先へ進めません。Chrome か iPhone の Safari で開くか、下の「マイク必須」をオフにしてください。</p>` : ''}
+    <p class="lead">ポンと一緒に、is と can を先頭にジャンプさせて疑問文をつくろう。</p>
+    <div class="path">
+      ${STAGES.map((s,i)=>`
+        <button class="node ${s.boss?'boss':''}" data-i="${i}" ${unlocked(i)?'':'disabled'}>
+          <span class="num">${s.boss?'B':i+1}</span>
+          <span><span class="t">${s.title}</span><span class="s">${esc(s.sub)}</span></span>
+          <span class="stars" aria-label="星${save.stars[s.id]||0}つ">${save.stars[s.id]?starStr(save.stars[s.id]):(unlocked(i)?'':'🔒')}</span>
+        </button>`).join('')}
+      <button class="node paper" id="paperNode" ${bossDone?'':'disabled'}>
+        <span class="num">✎</span>
+        <span><span class="t">紙ミッション</span><span class="s">テストの解き直しを紙で</span></span>
+        <span class="stars">${bossDone?PAPER.filter((_,i)=>save.paper[i]).length+'/'+PAPER.length:'🔒'}</span>
+      </button>
+    </div>
+    <div class="row" style="margin-top:18px">
+      <button class="linkbtn" id="snd">効果音：${save.sound?'オン':'オフ'}</button>
+      <button class="linkbtn" id="mreq">マイク必須：${save.micRequired?'オン':'オフ'}（保護者用・2秒長押し）</button>
+    </div>`;
+  app.querySelectorAll('.node[data-i]').forEach(b=>b.onclick=()=>{ sfx.tap(); startStage(+b.dataset.i); });
+  $('#paperNode').onclick=()=>{ sfx.tap(); showPaper(); };
+  $('#mapb').onclick=()=>{ sfx.coin(); setBuddy('mapb','jump'); };
+  $('#snd').onclick=()=>{ save.sound=!save.sound; persist(); showMap(); };
+  { const b=$('#mreq'); let t=null;
+    const down=e=>{ e.preventDefault(); b.textContent='そのまま押し続けて…'; t=setTimeout(()=>{ save.micRequired=!save.micRequired; persist(); sfx.coin(); showMap(); },2000); };
+    const up=()=>{ if(t){ clearTimeout(t); t=null; b.textContent=`マイク必須：${save.micRequired?'オン':'オフ'}（保護者用・2秒長押し）`; } };
+    b.addEventListener('pointerdown',down); ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,up));
+    b.addEventListener('contextmenu',e=>e.preventDefault()); }
+
+  window.scrollTo(0,0);
+}
+
+let S = {};
+function startStage(i){
+  const st=STAGES[i];
+  micPasses=0;
+  S={si:i, st, queue:st.items.map((it,k)=>({...it,_id:k})), retried:new Set(), misses:0, combo:0, best:0};
+  showIntro();
+}
+
+function showIntro(){
+  const st=S.st;
+  let body='';
+  if(st.intro==='jumpIs' || st.intro==='jumpCan'){
+    const isCan = st.intro==='jumpCan';
+    body = `
+      <div class="card">
+        <h2>${isCan?'can も同じ':'ジャンプのルール'}</h2>
+        <p>金色の <b>${isCan?'can':'is'}</b> ブロックをタップしてみよう。</p>
+        <div id="demo"></div>
+        <div class="buddyrow">${buddy('ib')}<p id="demoMsg" class="small bubble">ふつうの文は「だれが → ${isCan?'can':'is'}」の順。</p></div>
+      </div>
+      <button class="btn primary" id="go" disabled style="width:100%">スタート</button>`;
+    app.innerHTML = hud(false) + body;
+    mountDemo($('#demo'), isCan?['she','can','swim']:['he','is','a teacher'], 1, ()=>{
+      $('#demoMsg').innerHTML = isCan
+        ? '疑問文は <b>can</b> が先頭。答えは <b>Yes, she can. / No, she can\u2019t.</b>'
+        : '疑問文は <b>is</b> が先頭にジャンプ。最後は <b>?</b> になる。';
+      $('#go').disabled=false; setBuddy('ib','jump');
+    });
+  } else if(st.intro==='reply'){
+    const ex = ['Is he a teacher? — Yes, he is.','Is Ms. Cook a dancer? — Yes, she is.','Is this your cup? — No, it isn\u2019t.'];
+    body = `
+      <div class="card">
+        <h2>答え方のルール</h2>
+        <p>Yes / No のあとに「だれ（he / she / it）＋ is / isn't」。</p>
+        <p class="small">this / that で聞かれたら、答えは <b>it</b> に変わる。</p>
+        ${ex.map((e,k)=>`<div class="ex"><span>${e}</span><button class="speak" data-k="${k}">🔊</button></div>`).join('')}
+      </div>
+      <button class="btn primary" id="go" style="width:100%">スタート</button>`;
+    app.innerHTML = hud(false)+body;
+    app.querySelectorAll('.ex .speak').forEach(b=>b.onclick=()=>speak(ex[+b.dataset.k]));
+  } else {
+    body = `
+      <div class="card">
+        <h2>ボス戦</h2>
+        <p>テストに出た問題そのままだよ。全部クリアすると紙ミッションが開く。</p>
+        <p class="small">日本語を見て、ブロックを並べよう。</p>
+      </div>
+      <button class="btn primary" id="go" style="width:100%">スタート</button>`;
+    app.innerHTML = hud(false)+body;
+  }
+  bindBack();
+  $('#go').onclick=()=>{ sfx.tap(); nextItem(); };
+  window.scrollTo(0,0);
+}
+
+function hud(showMeta=true){
+  return `<div class="hud">
+    <button class="back" id="back">マップ</button>
+    <span class="name">${S.st.title}</span>
+    ${showMeta?`<span class="meta">のこり ${S.queue.length+1}　<span class="combo">${S.combo>=2?'🔥'+S.combo:''}</span></span>`:''}
+  </div>`;
+}
+function bindBack(){ $('#back').onclick=()=>{ try{speechSynthesis.cancel();}catch(e){} showMap(); }; }
+
+function nextItem(){
+  const it=S.queue.shift();
+  if(!it){ return showResult(); }
+  S.item=it; S.picked=[]; S.solved=false;
+  const ans=answerOf(it);
+  let toks;
+  if(it.mode==='make') toks=[...it.stmt];
+  else if(it.mode==='reply') toks=shuffle([...new Set([...(it.base||R2), ...(it.extra||[])])]);
+  else { toks=shuffle([...ans, ...(it.extra||[])]); let guard=0; while(eq(toks.slice(0,ans.length),ans) && guard++<10) toks=shuffle(toks); }
+  S.pool=toks.map((t,i)=>({id:i,t,used:false}));
+  renderPlay();
+}
+
+function renderPlay(){
+  const it=S.item, kind=kindOf(it);
+  let ins='', prompt='', ctx='', badge='', say='', sayLang='en-US';
+  if(it.mode==='make'){ ins='疑問文にしよう'; prompt=it.stmt.map((t,i)=>i?t:cap(t)).join(' ')+'.'; say=prompt; }
+  else if(it.mode==='reply'){ ins='英語で答えよう'; prompt=it.q; say=it.q;
+    badge=`<span class="badge ${it.yn}">${it.yn==='yes'?'はい':'いいえ'}</span>`; }
+  else { ins=`テスト ${it.no}`; prompt=it.ja; if(it.en){ ctx=it.en; say=it.en.replace(/— No!/,''); } else { say=it.ja; sayLang='ja-JP'; } }
+
+  app.innerHTML = hud(true) + `
+    <div class="sign">
+      <p class="ins">${ins}</p>
+      <p class="prompt">${esc(prompt)}</p>
+      ${ctx?`<p class="ctx">${esc(ctx)}</p>`:''}
+      ${badge}<button class="speak must" id="say">🔊 まず聞く</button>
+    </div>
+    <div class="rail" id="rail"></div>
+    <div class="buddyrow">${buddy('pb')}<p class="fb bubble" id="fb" aria-live="polite">まず🔊を押して、音声を聞いてね</p></div>
+    <div class="pool" id="pool"></div>
+    <div id="bottom">
+      <div class="actions">
+        <button class="btn" id="hint">ヒント</button>
+        <button class="btn" id="clear">リセット</button>
+        <button class="btn primary" id="check">チェック</button>
+      </div>
+    </div>`;
+  bindBack();
+  S.listened=false;
+  $('#say').onclick=()=>{
+    const b=$('#say'); b.classList.remove('must'); b.textContent='🔊 再生中…';
+    speak(say, sayLang, ()=>{
+      b.textContent='🔊 もう一度聞く'; b.classList.add('done');
+      if(!S.listened){ S.listened=true; $('#fb').className='fb bubble'; $('#fb').textContent='OK！ ブロックを並べてね'; drawTiles(); }
+    });
+  };
+  $('#hint').onclick=hint;
+  $('#clear').onclick=()=>{ S.picked.forEach(id=>S.pool[id].used=false); S.picked=[]; drawTiles(); };
+  $('#check').onclick=check;
+  drawTiles();
+  window.scrollTo(0,0);
+}
+
+function drawTiles(){
+  const rail=$('#rail'), pool=$('#pool'), kind=kindOf(S.item);
+  if(!S.picked.length){ rail.innerHTML='<span class="empty">下のブロックをタップして並べよう</span>'; }
+  else{
+    rail.innerHTML = S.picked.map((id,i)=>{ const t=S.pool[id].t;
+      const label = i===0?cap(t):t;
+      const comma = (i===0 && kind==='a' && isYN(t) && S.picked.length>1) ? '<span class="punct">,</span>' : '';
+      return `<button class="tile ${tileClass(t)}" data-r="${i}">${esc(label)}</button>${comma}`; }).join('')
+      + `<span class="punct">${kind==='q'?'?':'.'}</span>`;
+  }
+  pool.classList.toggle('locked', !S.listened);
+  const ck=$('#check'); if(ck) ck.disabled=!S.listened;
+  pool.innerHTML = S.pool.map(p=>`<button class="tile ${tileClass(p.t)} ${p.used?'used':''}" data-p="${p.id}" ${p.used?'tabindex="-1" aria-hidden="true"':''}>${esc(p.t)}</button>`).join('');
+  rail.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{ if(S.solved) return; sfx.tap();
+    const id=S.picked.splice(+b.dataset.r,1)[0]; S.pool[id].used=false; drawTiles(); });
+  pool.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{ if(S.solved||!S.listened) return; const p=S.pool[+b.dataset.p]; if(p.used) return;
+    sfx.tap(); p.used=true; S.picked.push(p.id); $('#fb').textContent=''; $('#fb').className='fb bubble'; drawTiles(); });
+}
+
+function tokensPicked(){ return S.picked.map(id=>S.pool[id].t); }
+
+function diagnose(it, toks){
+  const ans=answerOf(it), low=toks.map(t=>t.toLowerCase());
+  const stmt = it.stmt;
+  if(stmt && eq(toks, stmt)) return {jump:true, msg:`文の順番のままだよ。疑問文は ${stmt[it.v]} が先頭にジャンプ！`};
+  if(toks.length < ans.length) return {msg:'ブロックが足りないよ'};
+  const q = (it.q || it.en || '').toLowerCase();
+  if(kindOf(it)==='a' && isYN(ans[0])){
+    if(low.includes('this')||low.includes('that')) return {msg:'答えでは this / that は it に変わるよ'};
+    if(q.startsWith('can') && (low.includes('is')||low.includes("isn't"))) return {msg:'Can で聞かれたら can で答えるよ'};
+    if(q.startsWith('is') && (low.includes('can')||low.includes("can't"))) return {msg:'Is で聞かれたら is で答えるよ'};
+    if(low[0]!==ans[0]) return {msg: ans[0]==='yes' ? '「はい」は Yes から始めよう' : '「いいえ」は No から始めよう'};
+    if(ans[0]==='yes' && (low.includes("isn't")||low.includes("can't"))) return {msg:'Yes のときは is / can（not はつかない）'};
+    if(ans[0]==='no' && (low.includes('is')||low.includes('can'))) return {msg:"No のときは isn't / can't"};
+    if(low[1]!==ans[1]) return {msg:'だれのこと？ 男の人 → he、女の人 → she、物・動物 → it'};
+  }
+  if(it.tip) return {msg:it.tip};
+  return {msg:'おしい！ ヒントで確かめてみよう'};
+}
+
+function check(){
+  if(S.solved) return;
+  const it=S.item, toks=tokensPicked(), ans=answerOf(it), kind=kindOf(it);
+  if(!toks.length){ $('#fb').className='fb bubble ng'; $('#fb').textContent='まずブロックを並べよう'; return; }
+  if(eq(toks, ans)){
+    S.solved=true; S.combo++; S.best=Math.max(S.best,S.combo);
+    const text=textOf(ans, kind);
+    sfx.coin(); speak(text);
+    $('#fb').className='fb bubble ok'; $('#fb').textContent='やったね！'; setBuddy('pb','jump');
+    const strict = save.micRequired;
+    const useMic = SR && !micBlocked;
+    $('#bottom').innerHTML = `
+      <div class="win">
+        <div class="row"><strong style="color:var(--ok)">正解！</strong>${S.combo>=3?`<span class="pop">${S.combo} コンボ</span>`:''}</div>
+        <p class="big">${esc(text)}</p>
+        <p class="say">${useMic?'マイクボタンを押して、声に出して言ってみよう。':'声に出して1回言ってみよう。'}</p>
+        <p class="heard" id="heard" aria-live="polite"></p>
+        <div class="actions">
+          <button class="btn" id="again">🔊 もう一度</button>
+          ${useMic
+            ? `<button class="btn mic" id="mic">🎤 言ってみる</button>`
+            : strict ? `` : `<button class="btn go" id="next">言えた！ 次へ</button>`}
+        </div>
+        ${useMic&&!strict?`<p class="center" style="margin:8px 0 0"><button class="linkbtn" id="skip">マイクを使わずに次へ</button></p>`:''}
+      </div>`;
+    $('#again').onclick=()=>speak(text);
+    const heard=$('#heard');
+    const goNext=()=>{ sfx.tap(); nextItem(); };
+    if(!useMic && strict){
+      heard.className='heard'; heard.textContent='この画面ではマイクが使えないので先へ進めません。おうちの人に「マイク必須」をオフにしてもらうか、マイクが使える画面で開いてね。';
+      return;
+    }
+    if(!useMic){ $('#next').onclick=goNext; $('#next').focus(); return; }
+    if(!strict) $('#skip').onclick=goNext;
+    let tries=0, rec=null;
+    const mic=$('#mic');
+    const toNext=(label)=>{ mic.classList.remove('on','mic'); mic.classList.add('go'); mic.textContent=label; mic.onclick=goNext; mic.focus(); };
+    mic.onclick=()=>{
+      if(rec) return;
+      mic.classList.add('on'); mic.textContent='聞いてるよ…';
+      $('#fb').className='fb bubble'; $('#fb').textContent='聞いてるよ。どうぞ！';
+      rec=listen(text,(said,score)=>{
+        rec=null; mic.classList.remove('on');
+        const need = tries>=3 ? 0.6 : 0.8;
+        if(score>=need){
+          micPasses++; sfx.coin(); setBuddy('pb','jump');
+          heard.className='heard ok'; heard.textContent='聞こえたよ：「'+said+'」';
+          $('#fb').className='fb bubble ok'; $('#fb').textContent='バッチリ！ 発音も伝わってるよ';
+          toNext('次へ');
+        } else {
+          tries++; setBuddy('pb','sad');
+          heard.className='heard'; heard.textContent='「'+(said||'…')+'」に聞こえたよ';
+          $('#fb').className='fb bubble ng'; $('#fb').textContent= tries>=2 ? 'おしい！ 🔊で聞いてから、もう1回だけ言ってみよう' : 'もう一度、ゆっくり言ってみよう';
+          if(tries>=3 && !strict) toNext('次へ'); else mic.textContent='🎤 もう一度';
+          if(tries===3) heard.textContent+='（次からは少しゆるく判定するよ）';
+        }
+      },(err)=>{
+        rec=null; mic.classList.remove('on');
+        if(err==='not-allowed'||err==='service-not-allowed'||err==='start'||err==='audio-capture'){
+          micBlocked=true; heard.className='heard';
+          if(strict){ heard.textContent='この画面ではマイクが使えないので先へ進めません。おうちの人に「マイク必須」をオフにしてもらうか、マイクが使える画面で開いてね。'; mic.remove(); }
+          else { heard.textContent='この画面ではマイクが使えないみたい。声に出して言えたら次へ進もう。'; toNext('言えた！ 次へ'); }
+        } else {
+          heard.className='heard'; heard.textContent='声が聞こえなかったよ。ボタンを押してから言ってね。';
+          mic.textContent='🎤 もう一度';
+        }
+      });
+    };
+    mic.focus();
+    return;
+  }
+  S.misses++; S.combo=0; sfx.ng();
+  const rail=$('#rail'); rail.classList.remove('shake'); void rail.offsetWidth; rail.classList.add('shake');
+  if(!S.retried.has(it._id)){ S.retried.add(it._id); S.queue.push({...it}); }
+  const d=diagnose(it,toks);
+  $('#fb').className='fb bubble ng'; $('#fb').textContent=d.msg; setBuddy('pb','sad');
+  if(d.jump) openJump(it);
+}
+
+function hint(){
+  if(S.solved||!S.listened) return;
+  const ans=answerOf(S.item), toks=tokensPicked();
+  let i=0; while(i<toks.length && i<ans.length && toks[i].toLowerCase()===ans[i].toLowerCase()) i++;
+  S.combo=0;
+  if(i<toks.length){
+    const el=$('#rail').querySelector(`[data-r="${i}"]`); if(el){ el.classList.add('bad'); }
+    $('#fb').className='fb bubble ng'; $('#fb').textContent=`${i+1}番目から違うよ。赤いブロックをタップして戻そう`;
+    return;
+  }
+  if(i<ans.length){
+    const target=S.pool.find(p=>!p.used && p.t.toLowerCase()===ans[i].toLowerCase());
+    if(target){ const el=$('#pool').querySelector(`[data-p="${target.id}"]`); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+    $('#fb').className='fb bubble'; $('#fb').textContent=`${i+1}番目は光っているブロック`;
+  }
+}
+
+function openJump(it){
+  const m=document.createElement('div'); m.className='modal';
+  m.innerHTML=`<div class="card" role="dialog" aria-modal="true">
+    <h2>ジャンプ！</h2>
+    <p>金色の <b>${it.stmt[it.v]}</b> をタップして、先頭に飛ばそう。</p>
+    <div id="mdemo"></div>
+    <p id="mmsg" class="small"></p>
+    <button class="btn primary" id="mok" disabled style="width:100%">やってみる</button>
+  </div>`;
+  document.body.appendChild(m);
+  mountDemo(m.querySelector('#mdemo'), it.stmt, it.v, (q)=>{
+    m.querySelector('#mmsg').textContent = q + '　← この順番！';
+    const ok=m.querySelector('#mok'); ok.disabled=false; ok.focus();
+  });
+  m.querySelector('#mok').onclick=()=>{
+    m.remove(); S.picked.forEach(id=>S.pool[id].used=false); S.picked=[]; drawTiles();
+    $('#fb').className='fb bubble'; $('#fb').textContent='もう一度並べてみよう';
+  };
+  m.querySelector('.tile.pulse').focus();
+}
+
+function showResult(){
+  const n = S.misses===0 ? 3 : S.misses<=2 ? 2 : 1;
+  const id=S.st.id; const prev=save.stars[id]||0;
+  save.stars[id]=Math.max(prev,n); persist();
+  sfx.fan();
+  const nextI=S.si+1;
+  const msg = n===3 ? 'ノーミス！ 完ぺき。' : n===2 ? 'いいね。あと少しでノーミス。' : 'クリア！ もう一度やると星が増えるかも。';
+  app.innerHTML = `
+    <div class="card center">
+      ${buddy('rb','cheer')}
+      <h2>${S.st.title} クリア</h2>
+      <div class="bigstars" aria-label="星${n}つ">${starStr(n)}</div>
+      <p>${msg}</p>
+      <p class="small">ミス ${S.misses}回　最大コンボ ${S.best}${micPasses?`　マイク音読 ${micPasses}回`:''}</p>
+    </div>
+    <div class="actions">
+      <button class="btn" id="retry">もう一度</button>
+      ${S.st.boss
+        ? `<button class="btn go" id="to">紙ミッションへ</button>`
+        : `<button class="btn go" id="to">次のステージ</button>`}
+    </div>
+    <p class="center"><button class="linkbtn" id="map">マップへ戻る</button></p>`;
+  $('#retry').onclick=()=>startStage(S.si);
+  $('#to').onclick=()=> S.st.boss ? showPaper() : startStage(nextI);
+  $('#map').onclick=showMap;
+  window.scrollTo(0,0);
+}
+
+function showPaper(){
+  app.innerHTML = `
+    <div class="hud"><button class="back" id="back2">マップ</button><span class="name">紙ミッション</span></div>
+    <div class="card">
+      <h2>テストを紙で解き直そう</h2>
+      <p class="small">テスト用紙を見ながら、ノートに書く。書けたらチェック。答えは書いてから確かめよう。</p>
+      ${PAPER.map((p,i)=>`
+        <label class="pitem">
+          <input type="checkbox" data-i="${i}" ${save.paper[i]?'checked':''}>
+          <span><span class="no">${p.no}</span>${esc(p.ja)}
+            ${p.ans?`<span class="ans" hidden id="a${i}">${esc(p.ans)}</span><br><button type="button" class="linkbtn" data-show="${i}">答えを見る</button>`:''}
+          </span>
+        </label>`).join('')}
+    </div>
+    <p class="center small" id="pdone"></p>`;
+  $('#back2').onclick=showMap;
+  const upd=()=>{ const c=PAPER.filter((_,i)=>save.paper[i]).length;
+    $('#pdone').textContent = c===PAPER.length ? '全部できた！ おつかれさま。' : `${c} / ${PAPER.length}`; };
+  app.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.onchange=()=>{ save.paper[cb.dataset.i]=cb.checked; persist(); if(cb.checked) sfx.coin(); upd(); });
+  app.querySelectorAll('[data-show]').forEach(b=>b.onclick=(e)=>{ e.preventDefault(); const a=$('#a'+b.dataset.show); a.hidden=false; b.remove(); speak(a.textContent); });
+  upd(); window.scrollTo(0,0);
+}
+
+if('speechSynthesis' in window){ speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged=()=>{}; }
+showMap();
+</script>
+</body>
+</html>
